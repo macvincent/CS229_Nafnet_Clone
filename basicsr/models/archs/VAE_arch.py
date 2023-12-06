@@ -26,20 +26,16 @@ class SimpleGate(nn.Module):
         return x1 * x2
 
 class EncodingLayer(nn.Module):
-    def __init__(self, z_dim):
-        super().__init__()
-        self.z_dim = z_dim
-        self.middle_dim = int(np.sqrt(2 * self.z_dim))
-        self.linear = nn.Linear(self.z_dim, self.z_dim*2)
-    
     def forward(self, x):
-        x = x.view(x.size(0), x.size(1), -1)
-        mu, log_var = x[:, :, :self.z_dim], x[:, :, self.z_dim:]
+        x_size = x.shape
+        x = x.view(x_size[0], x_size[1], -1)
+        z_dim = x.shape[-1]//2
+        mu, log_var = x[:, :, :z_dim], x[:, :, z_dim:]
         std = torch.exp(log_var / 2)
         epsilon = torch.randn_like(std)
         x = epsilon * std + mu
-        x = self.linear(x)
-        x = x.view(x.size(0), x.size(1), self.middle_dim, self.middle_dim)
+        x = x.repeat(1, 1, 2)
+        x = x.view(x_size[0], x_size[1], x_size[2], x_size[3])
         return x
 
 
@@ -127,7 +123,7 @@ class VAENet(nn.Module):
             )
             chan = chan * 2
 
-        self.mid_encoder = EncodingLayer(128)
+        self.mid_encoder = EncodingLayer()
 
         for num in dec_blk_nums:
             self.ups.append(
@@ -217,3 +213,4 @@ if __name__ == '__main__':
     macs = float(macs[:-4])
 
     print(macs, params)
+
